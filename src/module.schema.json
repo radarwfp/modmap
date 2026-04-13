@@ -1,0 +1,58 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ModuleManifest",
+  "description": "Interface contract for a modmap module",
+  "type": "object",
+  "required": ["name", "version", "description", "files", "exports", "imports"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Module name, matches folder name"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semver version"
+    },
+    "description": {
+      "type": "string",
+      "description": "One-line summary of what this module does"
+    },
+    "files": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "All source files in this module"
+    },
+    "exports": {
+      "type": "object",
+      "description": "Public API: function/class/variable name -> type signature",
+      "additionalProperties": { "type": "string" }
+    },
+    "imports": {
+      "type": "object",
+      "description": "What this module needs from other modules: moduleName -> [symbols]",
+      "additionalProperties": {
+        "type": "array",
+        "items": { "type": "string" }
+      }
+    },
+    "types": {
+      "type": "object",
+      "description": "Key types/interfaces defined in this module",
+      "additionalProperties": { "type": "string" }
+    },
+    "env": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Required environment variables"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "stable", "deprecated"],
+      "description": "Stability of this module's API"
+    },
+    "lastModified": {
+      "type": "string",
+      "description": "ISO date of last change"
+    }
+  }
+}
