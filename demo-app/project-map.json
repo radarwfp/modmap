@@ -1,0 +1,28 @@
+{
+  "project": "modmap-demo",
+  "version": "1.0.0",
+  "description": "Task manager API — demo project for the modmap protocol",
+  "modules": ["database", "auth", "notifications", "tasks", "api"],
+
+  "graph": {
+    "database":      { "dependsOn": [] },
+    "auth":          { "dependsOn": ["database"] },
+    "notifications": { "dependsOn": ["database"] },
+    "tasks":         { "dependsOn": ["database", "auth", "notifications"] },
+    "api":           { "dependsOn": ["auth", "tasks", "notifications"] }
+  },
+
+  "entrypoints": {
+    "http": "api/api.handlers.ts — route(req)"
+  },
+
+  "conventions": {
+    "auth":         "All service functions that modify data take token as first arg. Use requireAuth() or requireRole().",
+    "errors":       "Throw plain Error with descriptive messages. Handlers convert to HTTP status codes.",
+    "ids":          "All IDs are prefixed strings: u1/u2 (users), task_xxx (tasks), notif_xxx (notifications), p1 (projects).",
+    "notifications":"Always use sendAlert() from notifications module — never write to db.notifications directly.",
+    "db":           "Never import db.client outside of service files. API handlers must go through service functions."
+  },
+
+  "lastModified": "2026-04-14"
+}

@@ -1,0 +1,22 @@
+{
+  "name": "notifications",
+  "version": "1.0.0",
+  "description": "Sends in-app and email alerts to users. Stores notification history.",
+  "files": ["notifications.service.ts"],
+  "exports": {
+    "sendAlert": "(payload: AlertPayload) => Notification",
+    "emailUser": "(userId: string, message: string) => Notification",
+    "getNotifications": "(userId: string) => NotificationSummary",
+    "markAsRead": "(notificationId: string) => void"
+  },
+  "imports": {
+    "database": ["db.users.findById", "db.notifications.findByUser", "db.notifications.save", "db.notifications.markRead"]
+  },
+  "types": {
+    "AlertPayload": "{ userId: string; message: string; channel?: NotificationChannel }",
+    "NotificationSummary": "{ total: number; unread: number; items: Notification[] }"
+  },
+  "env": ["EMAIL_API_KEY"],
+  "status": "stable",
+  "lastModified": "2026-04-14"
+}
