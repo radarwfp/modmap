@@ -1,0 +1,29 @@
+{
+  "task": "add user profile endpoint",
+  "modulesInvolved": [
+    "api"
+  ],
+  "oldWay": {
+    "totalTokens": 4752,
+    "breakdown": {
+      "database": 870,
+      "auth": 567,
+      "notifications": 529,
+      "tasks": 996,
+      "api": 1481,
+      "project-map.json": 309
+    }
+  },
+  "modularWay": {
+    "totalTokens": 4752,
+    "breakdown": {
+      "projectMap": 309,
+      "activeModuleCode": 4443,
+      "allManifests": 0
+    }
+  },
+  "savings": {
+    "tokens": 0,
+    "percentage": 0
+  }
+}

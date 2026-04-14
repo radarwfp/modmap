@@ -1,0 +1,29 @@
+{
+  "task": "add priority field to tasks",
+  "modulesInvolved": [
+    "tasks"
+  ],
+  "oldWay": {
+    "totalTokens": 4752,
+    "breakdown": {
+      "database": 870,
+      "auth": 567,
+      "notifications": 529,
+      "tasks": 996,
+      "api": 1481,
+      "project-map.json": 309
+    }
+  },
+  "modularWay": {
+    "totalTokens": 3654,
+    "breakdown": {
+      "projectMap": 309,
+      "activeModuleCode": 2962,
+      "allManifests": 383
+    }
+  },
+  "savings": {
+    "tokens": 1098,
+    "percentage": 23.106060606060606
+  }
+}
