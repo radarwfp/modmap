@@ -1,0 +1,25 @@
+{
+  "name": "auth",
+  "version": "1.0.0",
+  "description": "Token-based authentication. Login, logout, token validation, role enforcement.",
+  "files": ["auth.service.ts"],
+  "exports": {
+    "login": "(email: string, password: string) => LoginResult",
+    "logout": "(token: string) => void",
+    "validateToken": "(token: string) => AuthToken | null",
+    "getCurrentUser": "(token: string) => User | null",
+    "getUserById": "(userId: string) => User | null",
+    "requireAuth": "(token: string) => User — throws if invalid",
+    "requireRole": "(token: string, role: UserRole) => User — throws if insufficient role"
+  },
+  "imports": {
+    "database": ["db.users.findByEmail", "db.users.findById"]
+  },
+  "types": {
+    "AuthToken": "{ token: string; userId: string; expiresAt: Date }",
+    "LoginResult": "{ success: boolean; token?: AuthToken; error?: string }"
+  },
+  "env": [],
+  "status": "stable",
+  "lastModified": "2026-04-14"
+}

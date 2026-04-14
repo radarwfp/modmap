@@ -2,12 +2,13 @@
 
 /**
  * modmap generate
- * Scans a module folder and auto-creates a module.json stub
+ * Scans a module folder and auto-creates a modmap.json manifest
  * from the TypeScript exports it finds.
  *
  * Usage:
  *   npm run generate -- ./demo-app/auth
- *   npm run generate -- ./demo-app  (generates for all modules)
+ *   npm run generate -- ./demo-app              (all subfolders)
+ *   npm run generate -- ./demo-app --force      (overwrite existing manifests)
  */
 
 import * as fs from 'fs'
@@ -15,7 +16,9 @@ import * as path from 'path'
 import { writeJson, readFile, fileExists, today } from '../src/utils'
 import type { ModuleManifest } from '../src/types'
 
-// ── TypeScript export parser (regex-based, no compiler needed) ────────────────
+const MANIFEST_FILENAME = 'modmap.json'
+
+// ── TypeScript export parser ──────────────────────────────────────────────────
 
 interface ParsedExport {
   name: string
@@ -26,32 +29,49 @@ function parseExports(filePath: string): ParsedExport[] {
   if (!fileExists(filePath)) return []
   const src = readFile(filePath)
   const exports: ParsedExport[] = []
+  const seen = new Set<string>()
 
-  // Match: export function name(params): ReturnType
-  const funcRegex = /export\s+(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)\s*(?::\s*([^\{]+))?/g
-  let match
-  while ((match = funcRegex.exec(src)) !== null) {
-    const name = match[1]
-    const params = match[2].trim().replace(/\s+/g, ' ')
-    const ret = (match[3] ?? 'void').trim().replace(/\s+/g, ' ')
-    exports.push({ name, signature: `(${params}) => ${ret}` })
+  const add = (name: string, sig: string) => {
+    if (!seen.has(name)) { seen.add(name); exports.push({ name, signature: sig }) }
   }
 
-  // Match: export const name = ... or export const name: Type
+  // export function / export async function
+  const funcRegex = /export\s+(?:async\s+)?function\s+(\w+)\s*\(([^)]*)\)\s*(?::\s*([^{]+))?/g
+  let m
+  while ((m = funcRegex.exec(src)) !== null) {
+    const params = m[2].trim().replace(/\s+/g, ' ')
+    const ret = (m[3] ?? 'void').trim().replace(/\s+/g, ' ')
+    add(m[1], `(${params}) => ${ret}`)
+  }
+
+  // export const name
   const constRegex = /export\s+const\s+(\w+)\s*(?::\s*([^=\n]+))?=/g
-  while ((match = constRegex.exec(src)) !== null) {
-    const name = match[1]
-    const type = (match[2] ?? 'unknown').trim()
-    // Skip if already captured as function
-    if (!exports.find(e => e.name === name)) {
-      exports.push({ name, signature: type })
-    }
+  while ((m = constRegex.exec(src)) !== null) {
+    add(m[1], (m[2] ?? 'unknown').trim())
   }
 
-  // Match: export interface / export type
+  // export class
+  const classRegex = /export\s+(?:default\s+)?class\s+(\w+)/g
+  while ((m = classRegex.exec(src)) !== null) add(m[1], 'class')
+
+  // export interface / export type (recorded separately, not in exports section)
   const typeRegex = /export\s+(?:interface|type)\s+(\w+)/g
-  while ((match = typeRegex.exec(src)) !== null) {
-    exports.push({ name: match[1], signature: 'type' })
+  while ((m = typeRegex.exec(src)) !== null) add(m[1], 'type')
+
+  // export { foo, bar as baz } — named re-exports
+  const namedRegex = /export\s*\{([^}]+)\}\s*(?:from\s*['"][^'"]+['"])?/g
+  while ((m = namedRegex.exec(src)) !== null) {
+    const names = m[1].split(',').map(s => {
+      const parts = s.trim().split(/\s+as\s+/)
+      return (parts[1] ?? parts[0]).trim()
+    }).filter(n => n && !n.startsWith('//'))
+    for (const name of names) add(name, 're-export')
+  }
+
+  // export * from './other' — barrel, cannot enumerate symbols
+  const barrelRegex = /export\s+\*\s+from\s+['"]([^'"]+)['"]/g
+  while ((m = barrelRegex.exec(src)) !== null) {
+    add(`* from '${m[1]}'`, 'barrel re-export — symbols not enumerated, review manually')
   }
 
   return exports
@@ -62,29 +82,36 @@ function detectImports(filePath: string): Record<string, string[]> {
   const src = readFile(filePath)
   const imports: Record<string, string[]> = {}
 
-  // Match: import { a, b, c } from '../moduleName/...'
   const importRegex = /import\s*\{([^}]+)\}\s*from\s*['"]\.\.\/(\w+)\//g
-  let match
-  while ((match = importRegex.exec(src)) !== null) {
-    const symbols = match[1].split(',').map(s => s.trim()).filter(Boolean)
-    const moduleName = match[2]
-    if (!imports[moduleName]) imports[moduleName] = []
-    imports[moduleName].push(...symbols)
+  let m
+  while ((m = importRegex.exec(src)) !== null) {
+    const symbols = m[1].split(',').map(s => {
+      const parts = s.trim().split(/\s+as\s+/)
+      return parts[0].trim()
+    }).filter(Boolean)
+    const mod = m[2]
+    if (!imports[mod]) imports[mod] = []
+    imports[mod].push(...symbols)
   }
 
   return imports
 }
 
 function getTsFiles(dirPath: string): string[] {
-  return fs.readdirSync(dirPath)
-    .filter(f => f.endsWith('.ts') && !f.endsWith('.d.ts') && !f.endsWith('.test.ts'))
+  return fs.readdirSync(dirPath).filter(
+    f => f.endsWith('.ts') &&
+         !f.endsWith('.d.ts') &&
+         !f.endsWith('.test.ts') &&
+         !f.endsWith('.spec.ts')
+  )
+  // modmap.json is .json not .ts — never picked up here
 }
 
-// ── Generate a single module ──────────────────────────────────────────────────
+// ── Generate single module ────────────────────────────────────────────────────
 
-function generateManifest(modulePath: string): void {
+function generateManifest(modulePath: string, force: boolean): void {
   const moduleName = path.basename(modulePath)
-  const manifestPath = path.join(modulePath, 'module.json')
+  const manifestPath = path.join(modulePath, MANIFEST_FILENAME)
 
   if (!fs.existsSync(modulePath)) {
     console.error(`  ✗ Path not found: ${modulePath}`)
@@ -93,33 +120,35 @@ function generateManifest(modulePath: string): void {
 
   const tsFiles = getTsFiles(modulePath)
   if (tsFiles.length === 0) {
-    console.log(`  ⚠ No .ts files found in ${moduleName}, skipping`)
+    console.log(`  ⚠ No .ts files in ${moduleName} — skipping`)
     return
   }
 
-  // Check if manifest already exists
   const exists = fileExists(manifestPath)
+
+  if (exists && !force) {
+    console.log(`  ↷ ${moduleName}/modmap.json already exists — skipping (use --force to overwrite)`)
+    return
+  }
 
   const allExports: Record<string, string> = {}
   const allImports: Record<string, string[]> = {}
 
   for (const file of tsFiles) {
     const filePath = path.join(modulePath, file)
-    const parsed = parseExports(filePath)
-    for (const exp of parsed) {
-      // Skip type-only exports from the manifest exports section
+
+    for (const exp of parseExports(filePath)) {
       if (exp.signature !== 'type') {
         allExports[exp.name] = exp.signature
       }
     }
-    const imports = detectImports(filePath)
-    for (const [mod, symbols] of Object.entries(imports)) {
+
+    for (const [mod, symbols] of Object.entries(detectImports(filePath))) {
       if (!allImports[mod]) allImports[mod] = []
       allImports[mod].push(...symbols)
     }
   }
 
-  // Deduplicate imports
   for (const mod of Object.keys(allImports)) {
     allImports[mod] = [...new Set(allImports[mod])]
   }
@@ -139,17 +168,21 @@ function generateManifest(modulePath: string): void {
 
   writeJson(manifestPath, manifest)
 
-  const action = exists ? 'updated' : 'created'
-  console.log(`  ✓ ${moduleName}/module.json ${action} (${Object.keys(allExports).length} exports, ${Object.keys(allImports).length} import sources)`)
+  const action = exists ? 'overwritten' : 'created'
+  const ec = Object.keys(allExports).length
+  const ic = Object.keys(allImports).length
+  console.log(`  ✓ ${moduleName}/modmap.json ${action} (${ec} exports, ${ic} import source${ic !== 1 ? 's' : ''})`)
 }
 
-// ── CLI entry point ───────────────────────────────────────────────────────────
+// ── CLI ───────────────────────────────────────────────────────────────────────
 
 function main(): void {
-  const targetArg = process.argv[2]
+  const args = process.argv.slice(2)
+  const targetArg = args.find(a => !a.startsWith('--'))
+  const force = args.includes('--force')
 
   if (!targetArg) {
-    console.error('Usage: npm run generate -- <module-path-or-parent-dir>')
+    console.error('Usage: npm run generate -- <path> [--force]')
     process.exit(1)
   }
 
@@ -160,14 +193,13 @@ function main(): void {
     process.exit(1)
   }
 
-  console.log('\nmodmap generate\n')
+  console.log(`\nmodmap generate${force ? ' (--force)' : ''}\n`)
 
-  // If target contains a module.json or .ts files directly → single module
-  const tsFiles = fs.readdirSync(targetPath).filter(f => f.endsWith('.ts'))
+  const tsFiles = getTsFiles(targetPath)
+
   if (tsFiles.length > 0) {
-    generateManifest(targetPath)
+    generateManifest(targetPath, force)
   } else {
-    // Treat as parent dir — generate for all subdirs
     const subdirs = fs.readdirSync(targetPath, { withFileTypes: true })
       .filter(e => e.isDirectory())
       .map(e => path.join(targetPath, e.name))
@@ -177,12 +209,10 @@ function main(): void {
       process.exit(0)
     }
 
-    for (const subdir of subdirs) {
-      generateManifest(subdir)
-    }
+    for (const subdir of subdirs) generateManifest(subdir, force)
   }
 
-  console.log('\nDone. Review generated module.json files and fill in descriptions.\n')
+  console.log(`\nDone. Review generated modmap.json files and fill in descriptions.\n`)
 }
 
 main()

@@ -9,14 +9,23 @@
   "scripts": {
     "generate": "ts-node tools/generate.ts",
     "validate": "ts-node tools/validate.ts",
-    "measure":  "ts-node tools/measure.ts",
-    "session":  "ts-node tools/session.ts",
-    "build":    "tsc",
+    "measure": "ts-node tools/measure.ts",
+    "session": "ts-node tools/session.ts",
+    "build": "tsc",
     "test:measure": "ts-node tools/measure.ts --project ./demo-app --task \"add priority field to tasks\" --modules tasks",
     "test:validate": "ts-node tools/validate.ts ./demo-app",
-    "test:session":  "ts-node tools/session.ts --project ./demo-app --task \"add priority field to tasks\""
+    "test:session": "ts-node tools/session.ts --project ./demo-app --task \"add priority field to tasks\"",
+    "project": "ts-node tools/project.ts"
   },
-  "keywords": ["claude", "ai", "tokens", "context", "modular", "llm", "anthropic"],
+  "keywords": [
+    "claude",
+    "ai",
+    "tokens",
+    "context",
+    "modular",
+    "llm",
+    "anthropic"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {

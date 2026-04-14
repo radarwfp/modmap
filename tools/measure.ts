@@ -107,7 +107,7 @@ function measureModularWay(
     }
   }
 
-  // 3. module.json stubs for ALL other modules (interface only, not code)
+  // 3. modmap.json stubs for ALL other modules (interface only, not code)
   let manifestTokens = 0
   for (const [name, modPath] of Object.entries(allModulePaths)) {
     if (!modulesToLoad.has(name)) {

@@ -37,8 +37,10 @@ export function findProjectRoot(startDir: string = process.cwd()): string {
   return startDir
 }
 
+export const MANIFEST_FILENAME = 'modmap.json'
+
 export function loadManifest(modulePath: string): ModuleManifest | null {
-  const manifestPath = path.join(modulePath, 'module.json')
+  const manifestPath = path.join(modulePath, MANIFEST_FILENAME)
   if (!fileExists(manifestPath)) return null
   return readJson<ModuleManifest>(manifestPath)
 }
@@ -84,7 +86,7 @@ export function countTokensInDir(dirPath: string, extensions = ['.ts', '.js', '.
 }
 
 export function countManifestTokens(modulePath: string): number {
-  return countTokensInFile(path.join(modulePath, 'module.json'))
+  return countTokensInFile(path.join(modulePath, MANIFEST_FILENAME))
 }
 
 // ── Dependency resolution ─────────────────────────────────────────────────────

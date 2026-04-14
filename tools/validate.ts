@@ -2,7 +2,7 @@
 
 /**
  * modmap validate
- * Checks every module.json in a project against its actual source files.
+ * Checks every modmap.json in a project against its actual source files.
  * Warns on: missing exports, extra exports, missing imports, stale dates.
  *
  * Usage:
@@ -73,7 +73,7 @@ function validateModule(modulePath: string): ModuleValidationResult {
     return {
       moduleName,
       modulePath,
-      issues: [{ level: 'error', message: 'module.json not found — run: npm run generate -- ' + modulePath }],
+      issues: [{ level: 'error', message: 'modmap.json not found — run: npm run generate -- ' + modulePath }],
       passed: false,
     }
   }
@@ -130,7 +130,7 @@ function validateModule(modulePath: string): ModuleValidationResult {
   if (manifest.lastModified) {
     const days = daysSince(manifest.lastModified)
     if (days > 30) {
-      issues.push({ level: 'info', message: `module.json last modified ${days} days ago — verify it's still accurate` })
+      issues.push({ level: 'info', message: `modmap.json last modified ${days} days ago — verify it's still accurate` })
     }
   } else {
     issues.push({ level: 'info', message: 'No lastModified date set' })

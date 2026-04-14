@@ -51,8 +51,8 @@ function readModuleCode(modulePath: string): string {
 }
 
 function readManifestStub(modulePath: string): string {
-  const manifestPath = path.join(modulePath, 'module.json')
-  return fileExists(manifestPath) ? readFile(manifestPath) : '(no module.json found)'
+  const manifestPath = path.join(modulePath, 'modmap.json')
+  return fileExists(manifestPath) ? readFile(manifestPath) : '(no modmap.json found)'
 }
 
 // ── Simple keyword-based module guesser ───────────────────────────────────────
@@ -141,7 +141,7 @@ ${code}
       const modPath = modulePaths[mod]
       if (!modPath) continue
       const stub = readManifestStub(modPath)
-      sections.push(`### ${mod}/module.json
+      sections.push(`### ${mod}/modmap.json
 \`\`\`json
 ${stub}
 \`\`\``)
@@ -153,7 +153,7 @@ ${task}
 
 Rules:
 - Only modify files in: ${activeModules.join(', ')}
-- Update module.json if you add/change/remove any exports
+- Update modmap.json if you add/change/remove any exports
 - If this task requires changes to other modules, list them and stop — I will start a new session for each
 - After completing, output a brief handover summary`)
 
