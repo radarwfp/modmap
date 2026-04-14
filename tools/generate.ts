@@ -133,12 +133,15 @@ function generateManifest(modulePath: string, force: boolean): void {
 
   const allExports: Record<string, string> = {}
   const allImports: Record<string, string[]> = {}
+  const allTypes: Record<string, string> = {}
 
   for (const file of tsFiles) {
     const filePath = path.join(modulePath, file)
 
     for (const exp of parseExports(filePath)) {
-      if (exp.signature !== 'type') {
+      if (exp.signature === 'type') {
+        allTypes[exp.name] = 'TODO: add type definition'
+      } else {
         allExports[exp.name] = exp.signature
       }
     }
@@ -160,7 +163,7 @@ function generateManifest(modulePath: string, force: boolean): void {
     files: tsFiles,
     exports: allExports,
     imports: allImports,
-    types: {},
+    types: allTypes,
     env: [],
     status: 'draft',
     lastModified: today(),
